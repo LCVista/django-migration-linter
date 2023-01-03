@@ -23,33 +23,6 @@ from .utils import clean_bytes_to_str, get_migration_abspath, split_migration_pa
 
 logger = logging.getLogger("django_migration_linter")
 
-MIGRATIONS_BREAKPOINT = {
-    'actions': '0001',
-    'approvals': '0014',
-    'bulkuploads': '0022',
-    'compliance': '0106',
-    'contentpackages': '0008',
-    'django_celery_beat': '0014',
-    'django_celery_results': '0008',
-    'emailnotifications': '0042',
-    'emails': '0000', 
-    'environment': '0002',
-    'files': '0017',
-    'firmcompliance': '0002',
-    'launchlogs': '0004',
-    'learning': '0116',
-    'logs': '0020',
-    'multisite': '0022',
-    'orders': '0002',
-    'organizations': '0097',
-    'permissions': '0075',
-    'reports': '0014',
-    'scheduledreports': '0012',
-    'social_django': '0010',
-    'transactions': '0001',
-    'webcast': '0030',
-}
-
 
 @unique
 class MessageType(Enum):
@@ -140,6 +113,7 @@ class MigrationLinter:
         migration_name=None,
         git_commit_id=None,
         migrations_file_path=None,
+        exclude_migrations_before=None
     ):
         # Collect migrations
         migrations_list = self.read_migrations_list(migrations_file_path)
@@ -158,9 +132,11 @@ class MigrationLinter:
             if app_label and migration_name
             else None
         )
-        sorted_new_migrations = self.exclude_old_migrations(sorted_migrations)
 
-        for m in sorted_new_migrations:
+        if app_label and exclude_migrations_before:
+            sorted_migrations = self.exclude_old_migrations(sorted_migrations, app_label, exclude_migrations_before)
+
+        for m in sorted_migrations:
             if app_label and migration_name:
                 if m == specific_target_migration:
                     self.lint_migration(m)
@@ -173,10 +149,10 @@ class MigrationLinter:
         if self.should_use_cache():
             self.new_cache.save()
 
-    def exclude_old_migrations(self, sorted_migrations):
+    def exclude_old_migrations(self, sorted_migrations, app_label, exclude_migrations_before):
         sorted_new_migrations = []
         for m in sorted_migrations:
-            if m.app_label in MIGRATIONS_BREAKPOINT.keys() and m.name[0:4] > MIGRATIONS_BREAKPOINT[m.app_label]:
+            if m.app_label == app_label and m.name[0:4] > exclude_migrations_before:
                 sorted_new_migrations.append(m)
 
         return sorted_new_migrations

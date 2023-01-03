@@ -51,6 +51,12 @@ class Command(BaseCommand):
             ),
         )
         parser.add_argument(
+            "--exclude_migrations_before",
+            type=str,
+            nargs="?",
+            help="exclude migrations before",
+        )
+        parser.add_argument(
             "--ignore-name-contains",
             type=str,
             nargs="?",
@@ -178,6 +184,7 @@ class Command(BaseCommand):
             migration_name=options["migration_name"],
             git_commit_id=options["git_commit_id"],
             migrations_file_path=options["include_migrations_from"],
+            exclude_migrations_before=options["exclude_migrations_before"],
         )
         linter.print_summary()
         if linter.has_errors:
