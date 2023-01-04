@@ -113,6 +113,7 @@ class MigrationLinter:
         migration_name=None,
         git_commit_id=None,
         migrations_file_path=None,
+        exclude_migrations_before=None
     ):
         # Collect migrations
         migrations_list = self.read_migrations_list(migrations_file_path)
@@ -132,6 +133,9 @@ class MigrationLinter:
             else None
         )
 
+        if app_label and exclude_migrations_before:
+            sorted_migrations = self.exclude_old_migrations(sorted_migrations, app_label, exclude_migrations_before)
+
         for m in sorted_migrations:
             if app_label and migration_name:
                 if m == specific_target_migration:
@@ -144,6 +148,14 @@ class MigrationLinter:
 
         if self.should_use_cache():
             self.new_cache.save()
+
+    def exclude_old_migrations(self, sorted_migrations, app_label, exclude_migrations_before):
+        sorted_new_migrations = []
+        for m in sorted_migrations:
+            if m.app_label == app_label and m.name[0:4] > exclude_migrations_before:
+                sorted_new_migrations.append(m)
+
+        return sorted_new_migrations
 
     def lint_migration(self, migration):
         app_label = migration.app_label
